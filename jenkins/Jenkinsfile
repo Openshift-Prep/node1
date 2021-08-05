@@ -6,38 +6,63 @@ pipeline {
     agent any
       tools {nodejs "nodejs1"}
 
+      environment {
+              //TODO: Edit these vars as per your env
+              DEV_PROJECT = "project-dev"
+              STAGE_PROJECT = "project-stage"
+              APP_GIT_URL = "https://github.com/Openshift-Prep/node1"
+             //NEXUS_SERVER = "https://nexus-cicd.dte-ocp46-b7740f-915b3b336cabec458a7c7ec2aa7c625f-0000.us-east.containers.appdomain.cloud/repository/nodejs"
+
+              // DO NOT CHANGE THE GLOBAL VARS BELOW THIS LINE
+              APP_NAME = "node1app"
+          }
+
+
+
+
+
     stages {
 
-        stage('stage 1') {
-            steps {
-                script {
-                    openshift.withCluster() {
-                        openshift.withProject() {
-                                echo "stage 1: using project: ${openshift.project()} in cluster ${openshift.cluster()}"
-                        }
-                    }
+    stage('NPM Install') {
+                steps {
+                    echo '### Installing NPM dependencies ###'
+                    sh '''
+                            npm config set registry ${NEXUS_SERVER}
+                            npm install
+                       '''
                 }
             }
-        }
 
-        stage('stage 2') {
-        steps {
-            sh 'echo hello from stage 2!. This is the last stage...'
-        }
-    }
+            stage('Run Unit Tests') {
+                steps {
+                    echo '### Running unit tests ###'
+                    sh 'npm test'
+                }
+            }
 
-    stage('Manual Approval') {
-        steps {
-                timeout(time: 1, unit: 'MINUTES'){
-        input message : "Move to step 3?"
-      }
+            stage('Run Linting Tools') {
+                steps {
+                    echo '### Running eslint on code ###'
+                    sh 'npm run lint'
+                }
+            }
 
-        }
-    }
-
-        stage('stage 3') {
+            stage('Launch new app in DEV env') {
             steps {
-                sh 'echo hello from stage 3!. This is the last stage...'
+                echo '### Cleaning existing resources in DEV env ###'
+                sh '''
+                        oc -n${DEV_PROJECT} delete all -l app=${APP_NAME}
+                        sleep 5
+                   '''
+
+                echo '### Creating a new app in DEV env ###'
+                sh '''
+				       oc new-app --as-deployment-config \
+					   --name ${APP_NAME} nodejs:12~${APP_GIT_URL} \
+					   -n${DEV_PROJECT}
+
+					   oc -n${DEV_PROJECT} expose svc/${APP_NAME}
+				'''
             }
         }
 
