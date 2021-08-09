@@ -123,11 +123,11 @@ pipeline {
                 echo '### Creating a new app in Staging ###'
                 sh '''
 					oc new-app --as-deployment-config \
-					--name ${APP_NAME} nodejs:12~${APP_GIT_URL}#staging \
+					--name ${APP_NAME} \
 					-i ${APP_NAME}:stage \
 					-n ${STAGE_PROJECT}
 
-					oc -n${STAGE_PROJECT} expose svc/${APP_NAME}
+					oc expose svc/${APP_NAME}
 				'''
             }
         }
