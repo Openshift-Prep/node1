@@ -116,8 +116,9 @@ pipeline {
             steps {
                 echo '### Cleaning existing resources in Staging ###'
                 sh '''
-                        oc -n${STAGE_PROJECT} delete all -l app=${APP_NAME}
-                        sleep 5
+                oc project ${STAGE_PROJECT}
+                oc delete all -l app=${APP_NAME}
+                sleep 5
                    '''
 
                 echo '### Creating a new app in Staging ###'
